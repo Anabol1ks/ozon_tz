@@ -15,17 +15,19 @@ type Post {
 }
 
 type Comment {
-  id: ID!
-  post: Post!
-  author: User!
-  parent: Comment
-  content: String!
-  createdAt: String!
+	id: ID!
+	post: Post!
+	author: User!
+	parent: Comment
+	content: String!
+	createdAt: String!
+	children: [Comment!]!
 }
 
 type Query {
   getPosts: [Post!]!
   getPost(id: ID!): Post
+  getComments(postID: ID!, limit: Int, offset: Int): [Comment!]!
 }
 
 type Mutation {
