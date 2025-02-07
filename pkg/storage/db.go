@@ -13,8 +13,10 @@ var DB *gorm.DB
 
 func ConnectDatabase() {
 	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
+	if dsn != "" {
 		log.Fatal("DATABASE_URL не задана!")
+	} else {
+		log.Println("DATABASE_URL не задана, собираем DSN вручную")
 		host := os.Getenv("DB_HOST")
 		port := os.Getenv("DB_PORT")
 		user := os.Getenv("DB_USER")

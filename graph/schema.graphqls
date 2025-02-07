@@ -1,0 +1,40 @@
+type User {
+  id: ID!
+  username: String!
+  createdAt: String!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+  author: User!
+  disableComments: Boolean!
+  createdAt: String!
+  comments(limit: Int, offset: Int): [Comment!]!
+}
+
+type Comment {
+  id: ID!
+  post: Post!
+  author: User!
+  parent: Comment
+  content: String!
+  createdAt: String!
+}
+
+type Query {
+  getPosts: [Post!]!
+  getPost(id: ID!): Post
+}
+
+type Mutation {
+  createPost(title: String!, content: String!, authorID: ID!): Post!
+  createComment(postID: ID!, parentID: ID, authorID: ID!, content: String!): Comment!
+  toggleComments(postID: ID!, disable: Boolean!): Post!
+  createUser(username: String!): User!
+}
+
+type Subscription {
+  onNewComment(postID: ID!): Comment!
+}

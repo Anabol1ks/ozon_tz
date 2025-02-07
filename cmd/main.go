@@ -2,9 +2,11 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/Anabol1ks/ozon_tz/graph"
+	"github.com/Anabol1ks/ozon_tz/graph/model"
 	"github.com/Anabol1ks/ozon_tz/internal/models"
 	"github.com/Anabol1ks/ozon_tz/pkg/storage"
 	"github.com/gin-gonic/gin"
@@ -27,11 +29,17 @@ func main() {
 		log.Fatal("Ошибка миграции:", err)
 	}
 
+	resolver := &graph.Resolver{
+		DB:               storage.DB,
+		CommentObservers: make(map[string][]chan *model.Comment),
+	}
+
 	r := gin.Default()
 
-	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "GraphQL Posts API"})
-	})
+	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
+
+	r.POST("/query", gin.WrapH(srv))
+	r.GET("/query", gin.WrapH(srv))
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal("Ошибка запуска сервера:", err)
