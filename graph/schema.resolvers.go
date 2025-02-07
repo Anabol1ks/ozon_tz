@@ -17,15 +17,16 @@ type CommentResolver interface {
 func (r *mutationResolver) CreatePost(ctx context.Context, title string, content string, authorID string) (*model.Post, error) {
 	authorIDUint, _ := strconv.ParseUint(authorID, 10, 64)
 	post := &models.Post{Title: title, Content: content, AuthorID: uint(authorIDUint)}
-	if err := r.DB.Create(post).Error; err != nil {
+	if err := r.Store.CreatePost(post); err != nil {
 		return nil, err
 	}
 	return dbPostToGraphQL(post), nil
 }
 
 func (r *commentResolver) Children(ctx context.Context, obj *model.Comment) ([]*model.Comment, error) {
-	var comments []*models.Comment
-	if err := r.DB.Where("parent_id = ?", obj.ID).Find(&comments).Error; err != nil {
+	commentID, _ := strconv.ParseUint(obj.ID, 10, 64)
+	comments, err := r.Store.GetCommentChildren(uint(commentID))
+	if err != nil {
 		return nil, err
 	}
 
@@ -41,9 +42,8 @@ func (r *mutationResolver) CreateComment(ctx context.Context, postID string, par
 	postIDUint, _ := strconv.ParseUint(postID, 10, 64)
 	authorIDUint, _ := strconv.ParseUint(authorID, 10, 64)
 
-	// Check if post exists and comments are enabled
-	var post models.Post
-	if err := r.DB.First(&post, postIDUint).Error; err != nil {
+	post, err := r.Store.GetPost(uint(postIDUint))
+	if err != nil {
 		return nil, err
 	}
 
@@ -57,18 +57,18 @@ func (r *mutationResolver) CreateComment(ctx context.Context, postID string, par
 		Content:  content,
 	}
 
-	// Handle parent comment if specified
 	if parentID != nil {
 		parentIDUint, _ := strconv.ParseUint(*parentID, 10, 64)
 		// Verify parent comment exists
-		var parentComment models.Comment
-		if err := r.DB.First(&parentComment, parentIDUint).Error; err != nil {
+		_, err := r.Store.GetComment(uint(parentIDUint))
+		if err != nil {
 			return nil, errors.New("parent comment not found")
 		}
-		comment.ParentID = &parentComment.ID
+		parentIDUintVal := uint(parentIDUint)
+		comment.ParentID = &parentIDUintVal
 	}
 
-	if err := r.DB.Create(comment).Error; err != nil {
+	if err := r.Store.CreateComment(comment); err != nil {
 		return nil, err
 	}
 
@@ -77,15 +77,17 @@ func (r *mutationResolver) CreateComment(ctx context.Context, postID string, par
 
 // ToggleComments is the resolver for the toggleComments field.
 func (r *mutationResolver) ToggleComments(ctx context.Context, postID string, disable bool) (*model.Post, error) {
-	var post models.Post
-	if err := r.DB.First(&post, postID).Error; err != nil {
+	postIDUint, _ := strconv.ParseUint(postID, 10, 64)
+	post, err := r.Store.GetPost(uint(postIDUint))
+	if err != nil {
 		return nil, err
 	}
+
 	post.DisableComments = disable
-	if err := r.DB.Save(&post).Error; err != nil {
+	if err := r.Store.UpdatePost(post); err != nil {
 		return nil, err
 	}
-	return dbPostToGraphQL(&post), nil
+	return dbPostToGraphQL(post), nil
 }
 
 // CreateUser is the resolver for the createUser field.
@@ -95,7 +97,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, username string) (*mo
 	}
 
 	dbUser := &models.User{Username: username}
-	if err := r.DB.Create(dbUser).Error; err != nil {
+	if err := r.Store.CreateUser(dbUser); err != nil {
 		return nil, err
 	}
 
@@ -108,10 +110,11 @@ func (r *mutationResolver) CreateUser(ctx context.Context, username string) (*mo
 
 // GetPosts is the resolver for the getPosts field.
 func (r *queryResolver) GetPosts(ctx context.Context) ([]*model.Post, error) {
-	var posts []*models.Post
-	if err := r.DB.Find(&posts).Error; err != nil {
+	posts, err := r.Store.GetPosts()
+	if err != nil {
 		return nil, err
 	}
+
 	result := make([]*model.Post, len(posts))
 	for i, post := range posts {
 		result[i] = dbPostToGraphQL(post)
@@ -121,11 +124,12 @@ func (r *queryResolver) GetPosts(ctx context.Context) ([]*model.Post, error) {
 
 // GetPost is the resolver for the getPost field.
 func (r *queryResolver) GetPost(ctx context.Context, id string) (*model.Post, error) {
-	var post models.Post
-	if err := r.DB.First(&post, id).Error; err != nil {
+	postID, _ := strconv.ParseUint(id, 10, 64)
+	post, err := r.Store.GetPost(uint(postID))
+	if err != nil {
 		return nil, err
 	}
-	return dbPostToGraphQL(&post), nil
+	return dbPostToGraphQL(post), nil
 }
 
 // GetComments is the resolver for the getComments field.
@@ -135,22 +139,8 @@ func (r *queryResolver) GetComments(ctx context.Context, postID string, limit *i
 		return nil, err
 	}
 
-	var post models.Post
-	if err := r.DB.First(&post, postIDUint).Error; err != nil {
-		return nil, err
-	}
-
-	var comments []*models.Comment
-	query := r.DB.Where("post_id = ? AND parent_id IS NULL", post.ID)
-
-	if limit != nil {
-		query = query.Limit(int(*limit))
-	}
-	if offset != nil {
-		query = query.Offset(int(*offset))
-	}
-
-	if err := query.Find(&comments).Error; err != nil {
+	comments, err := r.Store.GetComments(uint(postIDUint), limit, offset)
+	if err != nil {
 		return nil, err
 	}
 

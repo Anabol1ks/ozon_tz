@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/Anabol1ks/ozon_tz/graph/model"
+	"github.com/Anabol1ks/ozon_tz/pkg/storage"
 	"gorm.io/gorm"
 )
 
@@ -13,6 +14,7 @@ import (
 
 type Resolver struct {
 	DB                *gorm.DB
+	Store             storage.Storage
 	CommentObservers  map[string][]chan *model.Comment
 	CommentObserversM sync.Mutex
 }

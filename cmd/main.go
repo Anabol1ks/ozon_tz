@@ -23,14 +23,23 @@ func main() {
 		}
 	}
 
-	storage.ConnectDatabase()
+	storageType := os.Getenv("STORAGE_TYPE")
+	if storageType == "" {
+		storageType = "postgres"
+	}
+	if err := storage.InitStorage(storageType); err != nil {
+		log.Fatal("Ошибка инициализации хранилища:", err)
+	}
 
-	if err := storage.DB.AutoMigrate(&models.User{}, &models.Post{}, &models.Comment{}); err != nil {
-		log.Fatal("Ошибка миграции:", err)
+	if storageType == "postgres" {
+		if err := storage.DB.AutoMigrate(&models.User{}, &models.Post{}, &models.Comment{}); err != nil {
+			log.Fatal("Ошибка миграции:", err)
+		}
 	}
 
 	resolver := &graph.Resolver{
 		DB:               storage.DB,
+		Store:            storage.Store,
 		CommentObservers: make(map[string][]chan *model.Comment),
 	}
 

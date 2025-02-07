@@ -25,6 +25,8 @@ DB_PASSWORD
 DB_NAME
 PGADMIN_DEFAULT_EMAIL
 PGADMIN_DEFAULT_PASSWORD
+
+STORAGE_TYPE= postgres или memory // по умолчанию postgres
 ```
 3. Запустите сервер: `go run cmd/main.go`
 
@@ -71,21 +73,6 @@ query {
     content
     createdAt
   }
-  
-  getComments(postID: "1", limit: 5, offset: 0) {
-    id
-    content
-    createdAt
-    children {
-      id
-      content
-      children {
-        id
-        content
-      }
-    }
-  }
-}
 ```
 
 ### Получение поста и его комментариев
@@ -137,7 +124,7 @@ mutation {
     content
   }
 }
-
+----------------------------
 mutation {
   createComment(
     postID: "1"
@@ -170,6 +157,27 @@ query {
       id
       content
     }
+  }
+}
+```
+
+### Отключение комментария
+```graphql
+mutation {
+  toggleComments(postID: 3, disable: true) {
+    id
+    disableComments
+  }
+}
+```
+
+### Подписка на новые комментарии
+```graphql
+subscription {
+  onNewComment(postID: "2") {
+    id
+    content
+    createdAt
   }
 }
 ```
