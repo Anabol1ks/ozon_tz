@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/Anabol1ks/ozon_tz/internal/models"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
