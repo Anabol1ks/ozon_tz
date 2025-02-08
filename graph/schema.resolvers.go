@@ -72,6 +72,18 @@ func (r *mutationResolver) CreateComment(ctx context.Context, postID string, par
 		return nil, err
 	}
 
+	r.CommentObserversM.Lock()
+	if channels, ok := r.CommentObservers[postID]; ok {
+		for _, ch := range channels {
+			// Отправляем комментарий в канал (если канал открыт)
+			select {
+			case ch <- dbCommentToGraphQL(comment):
+			default: // Если канал заблокирован (подписчик не слушает), пропускаем
+			}
+		}
+	}
+	r.CommentObserversM.Unlock()
+
 	return dbCommentToGraphQL(comment), nil
 }
 
@@ -164,15 +176,27 @@ func (r *subscriptionResolver) OnNewComment(ctx context.Context, postID string) 
 
 	go func() {
 		<-ctx.Done()
+
 		r.CommentObserversM.Lock()
+		defer r.CommentObserversM.Unlock()
+
+		// Фильтруем каналы, удаляя текущий
 		channels := r.CommentObservers[postKey]
-		for i, ch := range channels {
-			if ch == commentChan {
-				r.CommentObservers[postKey] = append(channels[:i], channels[i+1:]...)
-				break
+		newChannels := make([]chan *model.Comment, 0, len(channels))
+		for _, ch := range channels {
+			if ch != commentChan {
+				newChannels = append(newChannels, ch)
 			}
 		}
-		r.CommentObserversM.Unlock()
+
+		// Если больше нет подписчиков, удаляем ключ
+		if len(newChannels) > 0 {
+			r.CommentObservers[postKey] = newChannels
+		} else {
+			delete(r.CommentObservers, postKey)
+		}
+
+		close(commentChan) // Закрываем канал
 	}()
 
 	return commentChan, nil
