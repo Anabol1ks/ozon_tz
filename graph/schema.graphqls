@@ -33,7 +33,7 @@ type Query {
 type Mutation {
   createPost(title: String!, content: String!, authorID: ID!): Post!
   createComment(postID: ID!, parentID: ID, authorID: ID!, content: String!): Comment!
-  toggleComments(postID: ID!, disable: Boolean!): Post!
+  toggleComments(postID: ID!, disable: Boolean!, authorID: ID!): Post!
   createUser(username: String!): User!
 }
 

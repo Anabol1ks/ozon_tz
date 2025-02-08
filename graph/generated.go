@@ -63,7 +63,7 @@ type ComplexityRoot struct {
 		CreateComment  func(childComplexity int, postID string, parentID *string, authorID string, content string) int
 		CreatePost     func(childComplexity int, title string, content string, authorID string) int
 		CreateUser     func(childComplexity int, username string) int
-		ToggleComments func(childComplexity int, postID string, disable bool) int
+		ToggleComments func(childComplexity int, postID string, disable bool, authorID string) int
 	}
 
 	Post struct {
@@ -96,7 +96,7 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	CreatePost(ctx context.Context, title string, content string, authorID string) (*model.Post, error)
 	CreateComment(ctx context.Context, postID string, parentID *string, authorID string, content string) (*model.Comment, error)
-	ToggleComments(ctx context.Context, postID string, disable bool) (*model.Post, error)
+	ToggleComments(ctx context.Context, postID string, disable bool, authorID string) (*model.Post, error)
 	CreateUser(ctx context.Context, username string) (*model.User, error)
 }
 type QueryResolver interface {
@@ -222,7 +222,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ToggleComments(childComplexity, args["postID"].(string), args["disable"].(bool)), true
+		return e.complexity.Mutation.ToggleComments(childComplexity, args["postID"].(string), args["disable"].(bool), args["authorID"].(string)), true
 
 	case "Post.author":
 		if e.complexity.Post.Author == nil {
@@ -654,6 +654,11 @@ func (ec *executionContext) field_Mutation_toggleComments_args(ctx context.Conte
 		return nil, err
 	}
 	args["disable"] = arg1
+	arg2, err := ec.field_Mutation_toggleComments_argsAuthorID(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["authorID"] = arg2
 	return args, nil
 }
 func (ec *executionContext) field_Mutation_toggleComments_argsPostID(
@@ -679,6 +684,19 @@ func (ec *executionContext) field_Mutation_toggleComments_argsDisable(
 	}
 
 	var zeroVal bool
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_toggleComments_argsAuthorID(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("authorID"))
+	if tmp, ok := rawArgs["authorID"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -1468,7 +1486,7 @@ func (ec *executionContext) _Mutation_toggleComments(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().ToggleComments(rctx, fc.Args["postID"].(string), fc.Args["disable"].(bool))
+		return ec.resolvers.Mutation().ToggleComments(rctx, fc.Args["postID"].(string), fc.Args["disable"].(bool), fc.Args["authorID"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

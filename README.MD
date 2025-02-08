@@ -18,6 +18,8 @@
 1. Установите зависимости: `go mod download`
 2. Создайте файл `.env` с необходимыми переменными.
 ```
+STORAGE_TYPE= postgres или memory // по умолчанию postgres
+// Если выбрано postgres, то необходимо указать следующие переменные:
 DB_HOST
 DB_PORT
 DB_USER
@@ -25,10 +27,8 @@ DB_PASSWORD
 DB_NAME
 PGADMIN_DEFAULT_EMAIL
 PGADMIN_DEFAULT_PASSWORD
-
-STORAGE_TYPE= postgres или memory // по умолчанию postgres
 ```
-3. Запустите сервер: `go run cmd/main.go`
+1. Запустите сервер: `go run cmd/main.go`
 
 ### Через Docker
 1. Соберите и запустите контейнеры: `docker-compose up --build -d`
